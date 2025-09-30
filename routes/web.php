@@ -38,6 +38,7 @@ Route::prefix('house-owner')->name('house-owner.')->group(function () {
         Route::post('/bills/check-existing', [BillController::class, 'checkExisting'])->name('bills.check-existing');
         Route::resource('/bill-collections', BillCollection::class);
         Route::get('/bill-collection/{bill}/collect', [BillCollection::class, 'collect'])->name('bill-collection.collect');
+        Route::put('/bill-collection/{bill}/update', [BillCollection::class, 'updatePayment'])->name('bill-collection.update');
         
     });
 });

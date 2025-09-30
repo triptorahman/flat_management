@@ -18,7 +18,6 @@ return new class extends Migration
             $table->foreignId('bill_category_id')->constrained('bill_categories')->onDelete('cascade');
             $table->date('month');
             $table->decimal('amount', 12, 2);
-            $table->decimal('due_amount', 12, 2)->default(0);
             $table->enum('status', ['unpaid', 'paid'])->default('unpaid');
             $table->text('notes')->nullable();
             $table->timestamp('paid_at')->nullable();

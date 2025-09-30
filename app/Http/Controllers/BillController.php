@@ -59,9 +59,11 @@ class BillController extends Controller
                 ->first();
 
             if ($selectedFlat) {
+                
                 $dueAmount = Bill::where('flat_id', $selectedFlatId)
                     ->where('status', 'unpaid')
                     ->sum('amount');
+
             }
         }
 
@@ -82,10 +84,9 @@ class BillController extends Controller
     {
         $houseOwner = Auth::guard('house_owner')->user();
 
-        $request->validate([
+                $request->validate([
             'flat_id' => 'required|exists:flats,id',
             'month' => 'required|date_format:Y-m',
-            'due_amount' => 'nullable|numeric|min:0',
             'status' => 'required|in:unpaid,paid',
             'notes' => 'nullable|string|max:1000',
             'categories' => 'required|array|min:1',
@@ -103,11 +104,6 @@ class BillController extends Controller
                 return back()->withErrors(['amounts' => 'Please enter valid amounts for all selected categories.'])->withInput();
             }
         }
-
-
-        $flat = Flat::where('id', $request->flat_id)
-            ->where('house_owner_id', $houseOwner->id)
-            ->firstOrFail();
 
 
         $monthDate = date('Y-m-01', strtotime($request->month . '-01'));
@@ -139,8 +135,7 @@ class BillController extends Controller
                     'bill_category_id' => $request->categories[0],
                     'month' => $monthDate,
                     'amount' => $totalAmount,
-                    'due_amount' => $request->due_amount ?? 0,
-                    'status' => $request->status,
+                    'status' => 'unpaid',
                     'notes' => $request->notes,
                     'paid_at' => null,
                 ]);
@@ -165,7 +160,7 @@ class BillController extends Controller
             return redirect()->route('house-owner.bills.index')
                 ->with('success', 'Bill created successfully with ' . count($categories) . ' categories!');
         } catch (\Exception $e) {
-            // Log the error for debugging
+
             Log::error('Bill creation failed: ' . $e->getMessage());
 
             return back()
