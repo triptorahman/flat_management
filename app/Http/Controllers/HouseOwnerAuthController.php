@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use App\Models\Flat;
+use App\Models\Tenant;
 
 class HouseOwnerAuthController extends Controller
 {
@@ -60,9 +62,24 @@ class HouseOwnerAuthController extends Controller
     public function dashboard()
     {
         $houseOwner = Auth::guard('house_owner')->user();
-        $building = $houseOwner->building; // Get the building relationship
+        $building = $houseOwner->building;
+
+        // Calculate flat statistics
+        $totalFlats = Flat::where('house_owner_id', $houseOwner->id)->count();
         
-        return view('house-owner.dashboard', compact('building'));
+        $occupiedFlats = Flat::where('house_owner_id', $houseOwner->id)
+            ->whereHas('tenant')
+            ->count();
+            
+        $availableFlats = $totalFlats - $occupiedFlats;
+        
+        $stats = [
+            'total_flats' => $totalFlats,
+            'occupied_flats' => $occupiedFlats,
+            'available_flats' => $availableFlats,
+        ];
+        
+        return view('house-owner.dashboard', compact('building', 'stats'));
     }
 
     /**

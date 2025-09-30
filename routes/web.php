@@ -31,7 +31,6 @@ Route::prefix('house-owner')->name('house-owner.')->group(function () {
     Route::middleware('auth:house_owner')->group(function () {
         Route::post('logout', [HouseOwnerAuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [HouseOwnerAuthController::class, 'dashboard'])->name('dashboard');
-        Route::get('building', [HouseOwnerAuthController::class, 'building'])->name('building');
         Route::resource('/flats', FlatController::class);
         Route::resource('/bill-categories', BillCategoryController::class);
         Route::resource('/bills', BillController::class);

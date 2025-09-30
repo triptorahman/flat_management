@@ -130,13 +130,11 @@ class BillCollection extends Controller
 
             foreach ($previousUnpaidBills as $previousBill) {
                 $previousBill->status = 'paid';
-                $previousBill->due_amount = 0;
                 $previousBill->paid_at = $request->payment_date;
                 $previousBill->save();
             }
 
             $bill->status = 'paid';
-            $bill->due_amount = 0;
             $bill->paid_at = $request->payment_date;
         } else {
             $bill->status = 'paid';
@@ -145,13 +143,19 @@ class BillCollection extends Controller
 
         $bill->save();
 
-        $totalPaid = $includeDueAmount ?
-            number_format($bill->amount + ($includeDueAmount ? 0 : $bill->due_amount), 2) :
-            number_format($bill->amount, 2);
-
-        $message = $includeDueAmount ?
-            "Payment of $" . number_format($bill->amount + $bill->due_amount, 2) . " collected successfully (including due amount)." :
-            "Payment of $" . number_format($bill->amount, 2) . " collected successfully. Due amount remains unpaid.";
+        if ($includeDueAmount) {
+            // Calculate the total amount paid including previous due amounts
+            $previousDueAmount = Bill::where('flat_id', $bill->flat_id)
+                ->where('status', 'paid')
+                ->where('month', '<', $bill->month)
+                ->where('paid_at', $request->payment_date)
+                ->sum('amount');
+            
+            $totalAmount = $bill->amount + $previousDueAmount;
+            $message = "Payment of $" . number_format($totalAmount, 2) . " collected successfully (including previous due amounts).";
+        } else {
+            $message = "Payment of $" . number_format($bill->amount, 2) . " collected successfully. Previous due amounts remain unpaid.";
+        }
 
         return redirect()->route('house-owner.bill-collections.index')
             ->with('success', $message);
