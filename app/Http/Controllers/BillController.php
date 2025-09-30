@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bill;
-use App\Models\BillDetail;
 use App\Models\Tenant;
 use App\Models\Flat;
 use App\Models\BillCategory;
 use App\Models\Building;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class BillController extends Controller
 {
@@ -33,18 +34,15 @@ class BillController extends Controller
     public function create(Request $request)
     {
         $houseOwner = Auth::guard('house_owner')->user();
-        
-        // Get flats belonging to this house owner
         $flats = Flat::where('house_owner_id', $houseOwner->id)
             ->orderBy('flat_number')
             ->get();
-            
-        // Get bill categories belonging to this house owner
+
+        
         $billCategories = BillCategory::where('house_owner_id', $houseOwner->id)
             ->orderBy('name')
             ->get();
 
-        // Get selected tenant and flat if provided
         $selectedTenantId = $request->get('tenant_id');
         $selectedFlatId = $request->get('flat_id');
         $selectedTenant = null;
@@ -59,8 +57,7 @@ class BillController extends Controller
             $selectedFlat = Flat::where('id', $selectedFlatId)
                 ->where('house_owner_id', $houseOwner->id)
                 ->first();
-            
-            // Calculate due amount from previous unpaid bills
+
             if ($selectedFlat) {
                 $dueAmount = Bill::where('flat_id', $selectedFlatId)
                     ->where('status', 'unpaid')
@@ -69,10 +66,10 @@ class BillController extends Controller
         }
 
         return view('house-owner.bill.create', compact(
-            'flats', 
-            'billCategories', 
-            'selectedTenant', 
-            'selectedFlat', 
+            'flats',
+            'billCategories',
+            'selectedTenant',
+            'selectedFlat',
             'selectedFlatId',
             'dueAmount'
         ));
@@ -84,7 +81,7 @@ class BillController extends Controller
     public function store(Request $request)
     {
         $houseOwner = Auth::guard('house_owner')->user();
-        
+
         $request->validate([
             'flat_id' => 'required|exists:flats,id',
             'month' => 'required|date_format:Y-m',
@@ -95,27 +92,26 @@ class BillController extends Controller
             'categories.*' => 'required|exists:bill_categories,id',
         ]);
 
-        // Custom validation for amounts corresponding to selected categories
+
         $categories = $request->categories ?? [];
         $amounts = $request->amounts ?? [];
         $descriptions = $request->descriptions ?? [];
 
-        // Validate that we have amounts for all selected categories
+
         foreach ($categories as $categoryId) {
             if (!isset($amounts[$categoryId]) || !is_numeric($amounts[$categoryId]) || $amounts[$categoryId] < 0) {
                 return back()->withErrors(['amounts' => 'Please enter valid amounts for all selected categories.'])->withInput();
             }
         }
 
-        // Verify the flat belongs to this house owner
+
         $flat = Flat::where('id', $request->flat_id)
             ->where('house_owner_id', $houseOwner->id)
             ->firstOrFail();
 
-        // Convert month to proper date format (first day of the month)
+
         $monthDate = date('Y-m-01', strtotime($request->month . '-01'));
 
-        // Check if bill already exists for this flat and month
         $existingBill = Bill::where('flat_id', $request->flat_id)
             ->where('house_owner_id', $houseOwner->id)
             ->whereYear('month', date('Y', strtotime($monthDate)))
@@ -128,41 +124,54 @@ class BillController extends Controller
                 ->withInput();
         }
 
-        // Calculate total amount from selected categories
+
         $totalAmount = 0;
         foreach ($categories as $categoryId) {
             $totalAmount += $amounts[$categoryId];
         }
 
-        // Create the main bill record
-        $bill = Bill::create([
-            'flat_id' => $request->flat_id,
-            'house_owner_id' => $houseOwner->id,
-            'bill_category_id' => $request->categories[0], // Use first category as primary
-            'month' => $monthDate,
-            'amount' => $totalAmount,
-            'due_amount' => $request->due_amount ?? 0,
-            'status' => $request->status,
-            'notes' => $request->notes,
-            'paid_at' => $request->status === 'paid' ? now() : null,
-        ]);
+        try {
+            $bill = DB::transaction(function () use ($request, $houseOwner, $monthDate, $totalAmount, $categories, $amounts, $descriptions) {
+                
+                $bill = Bill::create([
+                    'flat_id' => $request->flat_id,
+                    'house_owner_id' => $houseOwner->id,
+                    'bill_category_id' => $request->categories[0],
+                    'month' => $monthDate,
+                    'amount' => $totalAmount,
+                    'due_amount' => $request->due_amount ?? 0,
+                    'status' => $request->status,
+                    'notes' => $request->notes,
+                    'paid_at' => null,
+                ]);
 
-        // Create bill details for each selected category
-        foreach ($request->categories as $categoryId) {
-            // Verify each category belongs to this house owner
-            $billCategory = BillCategory::where('id', $categoryId)
-                ->where('house_owner_id', $houseOwner->id)
-                ->firstOrFail();
+                
+                foreach ($categories as $categoryId) {
+                    
+                    $billCategory = BillCategory::where('id', $categoryId)
+                        ->where('house_owner_id', $houseOwner->id)
+                        ->firstOrFail();
 
-            $bill->billDetails()->create([
-                'bill_category_id' => $categoryId,
-                'amount' => $amounts[$categoryId],
-                'description' => $descriptions[$categoryId] ?? null,
-            ]);
+                    $bill->billDetails()->create([
+                        'bill_category_id' => $categoryId,
+                        'amount' => $amounts[$categoryId],
+                        'description' => $descriptions[$categoryId] ?? null,
+                    ]);
+                }
+
+                return $bill;
+            });
+
+            return redirect()->route('house-owner.bills.index')
+                ->with('success', 'Bill created successfully with ' . count($categories) . ' categories!');
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            Log::error('Bill creation failed: ' . $e->getMessage());
+
+            return back()
+                ->withErrors(['error' => 'Failed to create bill. Please try again.'])
+                ->withInput();
         }
-
-        return redirect()->route('house-owner.bills.index')
-            ->with('success', 'Bill created successfully with ' . count($request->categories) . ' categories!');
     }
 
     /**
@@ -191,114 +200,4 @@ class BillController extends Controller
         ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Bill $bill)
-    {
-        $houseOwner = Auth::guard('house_owner')->user();
-
-        // Ensure the bill belongs to the authenticated house owner
-        if ($bill->house_owner_id !== $houseOwner->id) {
-            abort(403);
-        }
-
-        $bill->load(['flat', 'billCategory']);
-
-        return view('house-owner.bill.show', compact('bill'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Bill $bill)
-    {
-        $houseOwner = Auth::guard('house_owner')->user();
-
-        // Ensure the bill belongs to the authenticated house owner
-        if ($bill->house_owner_id !== $houseOwner->id) {
-            abort(403);
-        }
-
-        // Get flats belonging to this house owner
-        $flats = Flat::where('house_owner_id', $houseOwner->id)
-            ->orderBy('flat_number')
-            ->get();
-            
-        // Get bill categories belonging to this house owner
-        $billCategories = BillCategory::where('house_owner_id', $houseOwner->id)
-            ->orderBy('name')
-            ->get();
-
-        return view('house-owner.bill.edit', compact('bill', 'flats', 'billCategories'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Bill $bill)
-    {
-        $houseOwner = Auth::guard('house_owner')->user();
-
-        // Ensure the bill belongs to the authenticated house owner
-        if ($bill->house_owner_id !== $houseOwner->id) {
-            abort(403);
-        }
-
-        $request->validate([
-            'flat_id' => 'required|exists:flats,id',
-            'bill_category_id' => 'required|exists:bill_categories,id',
-            'month' => 'required|date_format:Y-m',
-            'amount' => 'required|numeric|min:0',
-            'due_amount' => 'nullable|numeric|min:0',
-            'status' => 'required|in:unpaid,paid',
-            'notes' => 'nullable|string|max:1000',
-        ]);
-
-        // Verify the flat belongs to this house owner
-        $flat = Flat::where('id', $request->flat_id)
-            ->where('house_owner_id', $houseOwner->id)
-            ->firstOrFail();
-            
-        // Verify the bill category belongs to this house owner
-        $billCategory = BillCategory::where('id', $request->bill_category_id)
-            ->where('house_owner_id', $houseOwner->id)
-            ->firstOrFail();
-
-        // Convert month to proper date format (first day of the month)
-        $monthDate = date('Y-m-01', strtotime($request->month . '-01'));
-
-        $bill->update([
-            'flat_id' => $request->flat_id,
-            'bill_category_id' => $request->bill_category_id,
-            'month' => $monthDate,
-            'amount' => $request->amount,
-            'due_amount' => $request->due_amount ?? 0,
-            'status' => $request->status,
-            'notes' => $request->notes,
-            'paid_at' => $request->status === 'paid' && $bill->status !== 'paid' ? now() : 
-                        ($request->status === 'unpaid' ? null : $bill->paid_at),
-        ]);
-
-        return redirect()->route('house-owner.bills.show', $bill)
-            ->with('success', 'Bill updated successfully!');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Bill $bill)
-    {
-        $houseOwner = Auth::guard('house_owner')->user();
-
-        // Ensure the bill belongs to the authenticated house owner
-        if ($bill->house_owner_id !== $houseOwner->id) {
-            abort(403);
-        }
-
-        $bill->delete();
-
-        return redirect()->route('house-owner.bills.index')
-            ->with('success', 'Bill deleted successfully!');
-    }
 }

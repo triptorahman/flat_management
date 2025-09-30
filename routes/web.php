@@ -7,6 +7,7 @@ use App\Http\Controllers\FlatController;
 use App\Http\Controllers\BillCategoryController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\BillCollection;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -35,6 +36,8 @@ Route::prefix('house-owner')->name('house-owner.')->group(function () {
         Route::resource('/bill-categories', BillCategoryController::class);
         Route::resource('/bills', BillController::class);
         Route::post('/bills/check-existing', [BillController::class, 'checkExisting'])->name('bills.check-existing');
+        Route::resource('/bill-collections', BillCollection::class);
+        Route::get('/bill-collection/{bill}/collect', [BillCollection::class, 'collect'])->name('bill-collection.collect');
         
     });
 });

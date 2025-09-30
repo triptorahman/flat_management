@@ -43,6 +43,14 @@ class Flat extends Model
     }
 
     /**
+     * Get the current tenant associated with the flat.
+     */
+    public function tenant()
+    {
+        return $this->hasOne(Tenant::class)->latest();
+    }
+
+    /**
      * Get the bills associated with the flat.
      */
     public function bills()
