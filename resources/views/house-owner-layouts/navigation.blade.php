@@ -73,20 +73,7 @@
                     </x-slot>
 
                     <x-slot name="content">
-                        <a href="#" class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                            </svg>
-                            {{ __('Profile') }}
-                        </a>
-
-                        <a href="#" class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                            {{ __('Settings') }}
-                        </a>
+                        
 
                         <div class="border-t border-gray-100"></div>
 
@@ -126,8 +113,17 @@
             <a href="{{ route('house-owner.dashboard') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('house-owner.dashboard') ? 'border-blue-300 text-blue-100 bg-blue-500' : 'border-transparent text-white hover:text-blue-200 hover:bg-blue-500 hover:border-blue-300' }} text-start text-base font-medium focus:outline-none focus:text-blue-200 focus:bg-blue-500 focus:border-blue-300 transition duration-150 ease-in-out">
                 {{ __('Dashboard') }}
             </a>
-            <a href="{{ route('house-owner.building') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('house-owner.building') ? 'border-blue-300 text-blue-100 bg-blue-500' : 'border-transparent text-white hover:text-blue-200 hover:bg-blue-500 hover:border-blue-300' }} text-start text-base font-medium focus:outline-none focus:text-blue-200 focus:bg-blue-500 focus:border-blue-300 transition duration-150 ease-in-out">
-                {{ __('My Building') }}
+            <a href="{{ route('house-owner.flats.index') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-white hover:text-blue-200 hover:bg-blue-500 hover:border-blue-300 focus:outline-none focus:text-blue-200 focus:bg-blue-500 focus:border-blue-300 transition duration-150 ease-in-out">
+                {{ __('Flats') }}
+            </a>
+            <a href="{{ route('house-owner.bill-categories.index') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-white hover:text-blue-200 hover:bg-blue-500 hover:border-blue-300 focus:outline-none focus:text-blue-200 focus:bg-blue-500 focus:border-blue-300 transition duration-150 ease-in-out">
+                {{ __('Bill Categories') }}
+            </a>
+            <a href="{{ route('house-owner.bills.index') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-white hover:text-blue-200 hover:bg-blue-500 hover:border-blue-300 focus:outline-none focus:text-blue-200 focus:bg-blue-500 focus:border-blue-300 transition duration-150 ease-in-out">
+                {{ __('Tenant Bill Generate') }}
+            </a>
+            <a href="{{ route('house-owner.bill-collections.index') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-white hover:text-blue-200 hover:bg-blue-500 hover:border-blue-300 focus:outline-none focus:text-blue-200 focus:bg-blue-500 focus:border-blue-300 transition duration-150 ease-in-out">
+                {{ __('Tenant Bill Collection') }}
             </a>
             <a href="#" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-white hover:text-blue-200 hover:bg-blue-500 hover:border-blue-300 focus:outline-none focus:text-blue-200 focus:bg-blue-500 focus:border-blue-300 transition duration-150 ease-in-out">
                 {{ __('Tenants') }}
@@ -142,14 +138,6 @@
             </div>
 
             <div class="mt-3 space-y-1">
-                <a href="#" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-white hover:text-blue-200 hover:bg-blue-500 hover:border-blue-300 focus:outline-none focus:text-blue-200 focus:bg-blue-500 focus:border-blue-300 transition duration-150 ease-in-out">
-                    {{ __('Profile') }}
-                </a>
-
-                <a href="#" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-white hover:text-blue-200 hover:bg-blue-500 hover:border-blue-300 focus:outline-none focus:text-blue-200 focus:bg-blue-500 focus:border-blue-300 transition duration-150 ease-in-out">
-                    {{ __('Settings') }}
-                </a>
-
                 <!-- Authentication -->
                 <form method="POST" action="{{ route('house-owner.logout') }}">
                     @csrf

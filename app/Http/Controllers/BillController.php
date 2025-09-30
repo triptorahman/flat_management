@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\BillGeneratedNotification;
 
 class BillController extends Controller
 {
@@ -157,8 +159,41 @@ class BillController extends Controller
                 return $bill;
             });
 
+            // Send email notification to tenant
+            $flat = Flat::with('tenant')->find($request->flat_id);
+            if ($flat && $flat->tenant && $flat->tenant->email) {
+                try {
+                    // Calculate due amount for email
+                    $dueAmount = Bill::where('flat_id', $flat->id)
+                        ->where('status', 'unpaid')
+                        ->where('month', '<', $bill->month)
+                        ->sum('amount');
+                    
+                    Mail::to($flat->tenant->email)->send(
+                        new BillGeneratedNotification($bill->load(['billDetails.billCategory', 'flat', 'houseOwner']), $flat->tenant, $dueAmount)
+                    );
+                    
+                    Log::info('Bill notification email sent to tenant: ' . $flat->tenant->email);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send bill notification email: ' . $e->getMessage());
+                    // Don't fail the bill creation if email fails
+                }
+            }
+
+            $successMessage = 'Bill created successfully with ' . count($categories) . ' categories!';
+            
+            if ($flat && $flat->tenant) {
+                if ($flat->tenant->email) {
+                    $successMessage .= ' Email notification sent to ' . $flat->tenant->name . ' (' . $flat->tenant->email . ').';
+                } else {
+                    $successMessage .= ' Note: No email sent - tenant does not have an email address on file.';
+                }
+            } else {
+                $successMessage .= ' Note: No email sent - no tenant assigned to this flat.';
+            }
+
             return redirect()->route('house-owner.bills.index')
-                ->with('success', 'Bill created successfully with ' . count($categories) . ' categories!');
+                ->with('success', $successMessage);
         } catch (\Exception $e) {
 
             Log::error('Bill creation failed: ' . $e->getMessage());
